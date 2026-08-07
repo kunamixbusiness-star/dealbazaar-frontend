@@ -6,36 +6,95 @@
 <style>
 body{font-family: Arial; background:#f4f4f4; margin:0; padding:20px}
 h1{text-align:center; color:#ff6600}
-.deal{background:white; padding:15px; margin:10px; border-radius:8px; box-shadow:0 2px 5px #ccc}
-button{background:#25D366; color:white; border:none; padding:10px 20px; border-radius:5px; cursor:pointer; width:100%}
+.card{background:white; padding:20px; margin:15px auto; border-radius:8px; box-shadow:0 2px 5px #ccc; max-width:600px}
+input, textarea, select{width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:5px}
+button{background:#25D366; color:white; border:none; padding:12px; border-radius:5px; cursor:pointer; width:100%; font-size:16px}
+button:hover{background:#128C7E}
+.btn-red{background:#ff4444}
 </style>
 </head>
 <body>
+
 <h1>🤝 DealBazaar - India ka Sabse Bada Deal Platform</h1>
+
+<!-- POST KARNE KA FORM -->
+<div class="card">
+  <h2>📢 Apna Kaam Post Karo</h2>
+  <input id="title" placeholder="Kaam ka naam - Ex: AC Repair">
+  <textarea id="desc" placeholder="Kaam ki detail likho"></textarea>
+  <input id="price" type="number" placeholder="Price ₹ me - Ex: 500">
+  <select id="type">
+    <option value="bachat">Bachat Deal</option>
+    <option value="premium">Premium Deal</option>
+  </select>
+  <button onclick="postDeal()">Post Karo</button>
+</div>
+
+<!-- DEALS DIKHEGI YAHAN -->
 <div id="deals"></div>
+
 <script>
-const deals = [
-  {id:1, title:"Mixer Grinder - 60% Off", price:1999},
-  {id:2, title:"MacBook Pro M3", price:180000}
-];
-let html = "";
-deals.forEach(deal => {
-  let commission = Math.round(deal.price * 0.20);
-  html += `
-    <div class="deal">
-      <h3>${deal.title}</h3>
-      <p><b>Price:</b> ₹${deal.price}</p>
-      <p style="color:red"><b>Deal karne ke liye pehle ₹${commission} commission do</b></p>
-      <button onclick="payCommission(${commission}, '${deal.title}')">Deal Pakka Karo ₹${commission}</button>
-    </div>
-  `
-});
-document.getElementById('deals').innerHTML = html;
+const API_URL = "https://dealbazaar-2.onrender.com";
+const MY_UPI = "8851589873-3@ybl";
+const COMMISSION = 0.20;
+
+// 1. DEALS LOAD KARNA
+async function loadDeals() {
+  let res = await fetch(`${API_URL}/api/deals`);
+  let data = await res.json();
+  
+  let html = "";
+  data.deals.forEach(deal => {
+    let commission = Math.round(deal.price * COMMISSION);
+    html += `
+      <div class="card">
+        <h3>${deal.title}</h3>
+        <p>${deal.desc || ''}</p>
+        <p><b>Price:</b> ₹${deal.price}</p>
+        <p><b>Type:</b> ${deal.type}</p>
+        <p style="color:red"><b>Deal karne ke liye pehle ₹${commission} commission do</b></p>
+        <button onclick="payCommission(${commission}, '${deal.title}')">Deal Pakka Karo ₹${commission}</button>
+      </div>
+    `
+  });
+  document.getElementById('deals').innerHTML = html;
+}
+
+// 2. POST KARNE KA FUNCTION
+async function postDeal() {
+  let title = document.getElementById('title').value;
+  let desc = document.getElementById('desc').value;
+  let price = document.getElementById('price').value;
+  let type = document.getElementById('type').value;
+
+  if(!title || !price) return alert("Title aur Price jaruri hai!");
+
+  let res = await fetch(`${API_URL}/api/deals`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({title, desc, price, type, status:"active"})
+  });
+
+  if(res.ok){
+    alert("Deal Post ho gayi! ✅");
+    document.getElementById('title').value = "";
+    document.getElementById('desc').value = "";
+    document.getElementById('price').value = "";
+    loadDeals(); // nayi deal dikha do
+  } else {
+    alert("Error aa gayi!");
+  }
+}
+
+// 3. UPI PAYMENT
 function payCommission(amount, title) {
-  let upiLink = `upi://pay?pa=8851589873-3@ybl&pn=DealBazaar&am=${amount}&cu=INR&tn=Commission for ${title}`;
+  let upiLink = `upi://pay?pa=${MY_UPI}&pn=DealBazaar&am=${amount}&cu=INR&tn=Commission for ${title}`;
   window.location.href = upiLink;
   alert("Payment karne ke baad screenshot bhejo. Fir hum dono party ko connect kar denge.");
 }
+
+loadDeals();
 </script>
+
 </body>
 </html>
